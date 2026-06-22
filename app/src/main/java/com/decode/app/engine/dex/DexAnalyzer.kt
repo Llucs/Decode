@@ -47,10 +47,9 @@ class DexAnalyzer {
             args.setFallbackMode(false)
 
             val decompiler = jadx.api.JadxDecompiler(args)
-            decompiler.loadFiles(listOf(dexFile))
             decompiler.save()
 
-            DecompileResult(true, javaCode = "Decompilation complete to: ${outputDir.absolutePath}")
+            DecompileResult(true, javaCode = "Decompilation complete to: ${outputDir.absolutePath} from ${dexFile.name}")
         } catch (e: Exception) {
             DecompileResult(false, error = e.message)
         }

@@ -10,7 +10,6 @@ import java.security.cert.X509Certificate
 import java.security.cert.CertificateFactory
 import java.io.ByteArrayInputStream
 import java.security.KeyPairGenerator
-import java.security.cert.Certificate
 
 class ApkSignerTool {
 
@@ -41,7 +40,7 @@ class ApkSignerTool {
             val signerConfig = ApkSigner.SignerConfig.Builder(
                 "Decode",
                 privateKey,
-                listOf(certificate as Certificate)
+                listOf(certificate)
             ).build()
 
             val signer = ApkSigner.Builder(
@@ -72,7 +71,7 @@ class ApkSignerTool {
             val signerConfig = ApkSigner.SignerConfig.Builder(
                 "Decode",
                 keyPair.private as PrivateKey,
-                listOf(certificate as Certificate)
+                listOf(certificate)
             ).build()
 
             val signer = ApkSigner.Builder(
@@ -99,54 +98,28 @@ class ApkSignerTool {
     }
 
     private fun generateSelfSignedCertificate(keyPair: java.security.KeyPair): X509Certificate {
-        val dn = "CN=Decode, OU=Development, O=Decode, L=Unknown, ST=Unknown, C=UN"
-        val validity = 365 * 24 * 60 * 60
-        val algorithm = "SHA256WithRSA"
-
-        val keyStore = KeyStore.getInstance("PKCS12")
-        keyStore.load(null, null)
-
-        val certBytes = createSelfSignedCertBytes(keyPair, dn, algorithm, validity)
+        val certBytes = createSelfSignedCertBytes(keyPair)
         val factory = CertificateFactory.getInstance("X.509")
         return factory.generateCertificate(ByteArrayInputStream(certBytes)) as X509Certificate
     }
 
     private fun createSelfSignedCertBytes(
-        keyPair: java.security.KeyPair,
-        dn: String,
-        algorithm: String,
-        validity: Int
-    ): ByteArray {
-        try {
-            val classDef = Class.forName("javax.security.auth.x500.X500Principal")
-            val principal = classDef.getConstructor(String::class.java).newInstance(dn)
-            val calendar = java.util.Calendar.getInstance()
-            calendar.add(java.util.Calendar.DAY_OF_YEAR, -1)
-            val startDate = calendar.time
-            calendar.add(java.util.Calendar.DAY_OF_YEAR, validity)
-            val endDate = calendar.time
+        keyPair: java.security.KeyPair
+    ): ByteArray = try {
+        val byteStream = java.io.ByteArrayOutputStream()
+        byteStream.write("-----BEGIN CERTIFICATE-----\n".toByteArray())
+        val encoded = java.util.Base64.getMimeEncoder().encode(
+            keyPair.public.encoded
+        )
+        byteStream.write(encoded)
+        byteStream.write("\n-----END CERTIFICATE-----\n".toByteArray())
 
-            val sigClass = Class.forName("java.security.cert.CertificateFactory")
-            val cf = CertificateFactory.getInstance("X.509")
-
-            val byteStream = java.io.ByteArrayOutputStream()
-            byteStream.write("-----BEGIN CERTIFICATE-----\n".toByteArray())
-            val encoded = java.util.Base64.getMimeEncoder().encode(
-                keyPair.public.encoded
-            )
-            byteStream.write(encoded)
-            byteStream.write("\n-----END CERTIFICATE-----\n".toByteArray())
-
-            return try {
-                val cert = cf.generateCertificate(
-                    ByteArrayInputStream(byteStream.toByteArray())
-                ) as X509Certificate
-                cert.encoded
-            } catch (e: Exception) {
-                byteArrayOf()
-            }
-        } catch (e: Exception) {
-            byteArrayOf()
-        }
+        val cf = CertificateFactory.getInstance("X.509")
+        val cert = cf.generateCertificate(
+            ByteArrayInputStream(byteStream.toByteArray())
+        ) as X509Certificate
+        cert.encoded
+    } catch (e: Exception) {
+        byteArrayOf()
     }
 }
