@@ -29,7 +29,7 @@ class SmaliEngine {
         }
     }
 
-    fun assembleDex(smaliDir: File, outputDex: File): SmaliResult {
+    fun assembleDex(outputDex: File): SmaliResult {
         return try {
             val dexPool = DexPool(Opcodes.getDefault())
             outputDex.parentFile?.mkdirs()

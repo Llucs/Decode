@@ -21,8 +21,8 @@ class ElfEditor {
             RandomAccessFile(elfFile, "r").use { raf ->
                 val magic = ByteArray(4)
                 raf.readFully(magic)
-                val isElf = magic[0].toInt() == 0x7F && magic[1].toInt() == 'E'.toInt() &&
-                        magic[2].toInt() == 'L'.toInt() && magic[3].toInt() == 'F'.toInt()
+                val isElf = magic[0].toInt() == 0x7F && magic[1].toInt() == 'E'.code &&
+                        magic[2].toInt() == 'L'.code && magic[3].toInt() == 'F'.code
 
                 if (!isElf) {
                     return ElfHeader(false, false, false, 0, 0, 0)

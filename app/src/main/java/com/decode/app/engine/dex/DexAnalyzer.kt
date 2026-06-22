@@ -44,7 +44,6 @@ class DexAnalyzer {
             val args = jadx.api.JadxArgs()
             args.setOutDir(outputDir)
             args.setCfgOutput(false)
-            args.setFallbackMode(false)
 
             val decompiler = jadx.api.JadxDecompiler(args)
             decompiler.save()

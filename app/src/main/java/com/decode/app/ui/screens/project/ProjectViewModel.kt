@@ -76,8 +76,8 @@ class ProjectViewModel(application: Application) : AndroidViewModel(application)
 
     fun rebuildApk() {
         val dir = workspaceDir ?: return
-        val proj = _project.value ?: return
         if (_isProcessing.value) return
+        if (_project.value == null) return
         _isProcessing.value = true
         viewModelScope.launch {
             try {
@@ -98,8 +98,8 @@ class ProjectViewModel(application: Application) : AndroidViewModel(application)
 
     fun rebuildAndSignApk() {
         val dir = workspaceDir ?: return
-        val proj = _project.value ?: return
         if (_isProcessing.value) return
+        if (_project.value == null) return
         _isProcessing.value = true
         viewModelScope.launch {
             try {

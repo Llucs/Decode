@@ -60,8 +60,7 @@ android {
             excludes += "/META-INF/*.DSA"
             excludes += "/META-INF/*.RSA"
             excludes += "/META-INF/*.properties"
-            excludes += "/META-INF/versions"
-            excludes += "/META-INF/versions/"
+            pickFirsts += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
 }

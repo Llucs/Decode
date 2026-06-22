@@ -16,7 +16,7 @@ class PngQuantizer {
         val error: String? = null
     )
 
-    fun compress(inputFile: File, outputFile: File, maxColors: Int = 256): QuantizeResult {
+    fun compress(inputFile: File, outputFile: File): QuantizeResult {
         return try {
             val originalSize = inputFile.length()
             val bitmap = BitmapFactory.decodeFile(inputFile.absolutePath)

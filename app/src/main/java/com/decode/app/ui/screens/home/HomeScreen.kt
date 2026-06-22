@@ -178,7 +178,7 @@ fun HomeScreen(
                     onNavigateUp = { viewModel.navigateUp() },
                     onNavigateInto = { viewModel.navigateInto(it) },
                     onOpenApk = { viewModel.processApkAtPath(context, it) },
-                    onOpenProject = onOpenProject
+                    onOpenEditor = onOpenEditor
                 )
             }
         }
@@ -352,7 +352,7 @@ private fun FileBrowserView(
     onNavigateUp: () -> Unit,
     onNavigateInto: (FileBrowserEntry) -> Unit,
     onOpenApk: (String) -> Unit,
-    onOpenProject: (String) -> Unit
+    onOpenEditor: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -407,10 +407,10 @@ private fun FileBrowserView(
                     FileBrowserRow(
                         entry = entry,
                         onClick = {
-                            if (entry.isDirectory) {
-                                onNavigateInto(entry)
-                            } else if (entry.isApk) {
-                                onOpenApk(entry.path)
+                            when {
+                                entry.isDirectory -> onNavigateInto(entry)
+                                entry.isApk -> onOpenApk(entry.path)
+                                else -> onOpenEditor(entry.path)
                             }
                         }
                     )
