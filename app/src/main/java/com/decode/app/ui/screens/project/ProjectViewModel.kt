@@ -85,10 +85,10 @@ class ProjectViewModel(application: Application) : AndroidViewModel(application)
                 val result = withContext(Dispatchers.IO) {
                     processor.rebuildApk(dir, outputFile)
                 }
-                result.onSuccess {
+                if (result.isSuccess) {
                     _statusMessage.emit("APK rebuilt: ${outputFile.absolutePath}")
-                }.onFailure { e ->
-                    _statusMessage.emit("Rebuild failed: ${e.message}")
+                } else {
+                    _statusMessage.emit("Rebuild failed: ${result.exceptionOrNull()?.message}")
                 }
             } finally {
                 _isProcessing.value = false
@@ -105,16 +105,20 @@ class ProjectViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val builtFile = File(dir, "built.apk")
                 val signedFile = File(dir, "signed.apk")
-                withContext(Dispatchers.IO) {
-                    processor.rebuildApk(dir, builtFile)
-                    val result = signer.signWithDefaultKey(builtFile, signedFile)
+                val ioResult = withContext(Dispatchers.IO) {
+                    val rebuildResult = processor.rebuildApk(dir, builtFile)
+                    if (rebuildResult.isFailure) {
+                        return@withContext "Rebuild failed: ${rebuildResult.exceptionOrNull()?.message}"
+                    }
+                    val signResult = signer.signWithDefaultKey(builtFile, signedFile)
                     builtFile.delete()
-                    result
-                }.onSuccess {
-                    _statusMessage.emit("APK rebuilt and signed: ${signedFile.absolutePath}")
-                }.onFailure { e ->
-                    _statusMessage.emit("Failed: ${e.message}")
+                    if (signResult.success) {
+                        "APK rebuilt and signed: ${signedFile.absolutePath}"
+                    } else {
+                        "Signing failed: ${signResult.error}"
+                    }
                 }
+                _statusMessage.emit(ioResult)
             } finally {
                 _isProcessing.value = false
             }
