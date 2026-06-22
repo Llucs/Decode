@@ -21,19 +21,20 @@ class ElfEditor {
             RandomAccessFile(elfFile, "r").use { raf ->
                 val magic = ByteArray(4)
                 raf.readFully(magic)
-                val isElf = magic[0] == 0x7F.toByte() && magic[1] == 'E'.toByte() &&
-                        magic[2] == 'L'.toByte() && magic[3] == 'F'.toByte()
+                val isElf = magic[0].toInt() == 0x7F && magic[1].toInt() == 'E'.toInt() &&
+                        magic[2].toInt() == 'L'.toInt() && magic[3].toInt() == 'F'.toInt()
 
                 if (!isElf) {
                     return ElfHeader(false, false, false, 0, 0, 0)
                 }
 
-                val is32Bit = raf.readByte() == 1
-                val littleEndian = raf.readByte() == 1
+                val is32Bit = raf.readByte().toInt() == 1
+                val littleEndian = raf.readByte().toInt() == 1
                 val order = if (littleEndian) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
 
                 raf.seek(0)
-                val header = ByteArray(if (is32Bit) 52 else 64)
+                val headerSize = if (is32Bit) 52 else 64
+                val header = ByteArray(headerSize)
                 raf.readFully(header)
                 val buf = ByteBuffer.wrap(header).order(order)
 

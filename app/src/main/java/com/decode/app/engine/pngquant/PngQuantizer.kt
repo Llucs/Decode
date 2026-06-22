@@ -2,6 +2,7 @@ package com.decode.app.engine.pngquant
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import java.io.File
 import java.io.FileOutputStream
 
@@ -26,7 +27,7 @@ class PngQuantizer {
             canvas.drawBitmap(bitmap, 0f, 0f, null)
 
             FileOutputStream(outputFile).use { out ->
-                compressed.compress(Bitmap.CompressFormat.PNG, 100, out)
+                compressed.compress(Bitmap.CompressFormat.PNG, 80, out)
             }
 
             val compressedSize = outputFile.length()

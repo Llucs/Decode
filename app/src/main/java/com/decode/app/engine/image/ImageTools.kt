@@ -12,7 +12,7 @@ class ImageTools {
 
     fun convertSvgToPng(svgFile: File, outputPng: File, width: Int = 512, height: Int = 512): Boolean {
         return try {
-            val svg = SVG.getFromFile(svgFile)
+            val svg = SVG.getFromInputStream(svgFile.inputStream())
             val picture = svg.renderToPicture()
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)

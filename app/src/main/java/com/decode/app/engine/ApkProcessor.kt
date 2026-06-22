@@ -6,8 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
+import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.cert.X509Certificate
 
 class ApkProcessor(private val context: Context) {
 
@@ -35,11 +36,11 @@ class ApkProcessor(private val context: Context) {
             extractApk(apkFile, outputDir)
 
             val apkInfo = ApkInfo(
-                packageName = manifestInfo.first,
-                versionName = manifestInfo.second,
-                versionCode = manifestInfo.third,
-                minSdk = manifestInfo.fourth,
-                targetSdk = manifestInfo.fifth,
+                packageName = manifestInfo.pkg,
+                versionName = manifestInfo.verName,
+                versionCode = manifestInfo.verCode,
+                minSdk = manifestInfo.minSdk,
+                targetSdk = manifestInfo.targetSdk,
                 fileSize = apkFile.length(),
                 entryCount = outputDir.listFiles()?.size ?: 0
             )
@@ -50,7 +51,12 @@ class ApkProcessor(private val context: Context) {
         }
     }
 
-    private fun extractManifestInfo(apkFile: File): FiveTuple {
+    private data class ManifestInfo(
+        val pkg: String, val verName: String, val verCode: Int,
+        val minSdk: Int, val targetSdk: Int
+    )
+
+    private fun extractManifestInfo(apkFile: File): ManifestInfo {
         var pkg = "unknown"
         var verName = "unknown"
         var verCode = 0
@@ -63,25 +69,17 @@ class ApkProcessor(private val context: Context) {
                 if (entry != null) {
                     val manifestBytes = jar.getInputStream(entry).readBytes()
                     val manifestStr = String(manifestBytes)
-                    val pkgRegex = Regex("""package="([^"]+)""")
-                    val verNameRegex = Regex("""versionName="([^"]+)""")
-                    val verCodeRegex = Regex("""versionCode="([^"]+)""")
-                    val minSdkRegex = Regex("""minSdkVersion="([^"]+)""")
-                    val targetSdkRegex = Regex("""targetSdkVersion="([^"]+)""")
-
-                    pkgRegex.find(manifestStr)?.let { pkg = it.groupValues[1] }
-                    verNameRegex.find(manifestStr)?.let { verName = it.groupValues[1] }
-                    verCodeRegex.find(manifestStr)?.let { verCode = it.groupValues[1].toIntOrNull() ?: 0 }
-                    minSdkRegex.find(manifestStr)?.let { minSdk = it.groupValues[1].toIntOrNull() ?: 0 }
-                    targetSdkRegex.find(manifestStr)?.let { targetSdk = it.groupValues[1].toIntOrNull() ?: 0 }
+                    Regex("""package="([^"]+)""").find(manifestStr)?.let { pkg = it.groupValues[1] }
+                    Regex("""versionName="([^"]+)""").find(manifestStr)?.let { verName = it.groupValues[1] }
+                    Regex("""versionCode="([^"]+)""").find(manifestStr)?.let { verCode = it.groupValues[1].toIntOrNull() ?: 0 }
+                    Regex("""minSdkVersion="([^"]+)""").find(manifestStr)?.let { minSdk = it.groupValues[1].toIntOrNull() ?: 0 }
+                    Regex("""targetSdkVersion="([^"]+)""").find(manifestStr)?.let { targetSdk = it.groupValues[1].toIntOrNull() ?: 0 }
                 }
             }
         } catch (_: Exception) {}
 
-        return FiveTuple(pkg, verName, verCode, minSdk, targetSdk)
+        return ManifestInfo(pkg, verName, verCode, minSdk, targetSdk)
     }
-
-    private data class FiveTuple(val first: String, val second: String, val third: Int, val fourth: Int, val fifth: Int)
 
     private fun extractApk(apkFile: File, outputDir: File) {
         java.util.zip.ZipFile(apkFile).use { zip ->
@@ -103,53 +101,22 @@ class ApkProcessor(private val context: Context) {
 
     suspend fun rebuildApk(
         inputDir: File,
-        outputFile: File,
-        signingConfig: SigningConfig? = null
+        outputFile: File
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val zipBuilder = java.util.zip.ZipOutputStream(FileOutputStream(outputFile))
-            inputDir.walkTopDown().forEach { file ->
-                if (file.isFile) {
-                    val entryName = file.relativeTo(inputDir).path
-                    zipBuilder.putNextEntry(java.util.zip.ZipEntry(entryName))
-                    file.inputStream().use { it.copyTo(zipBuilder) }
-                    zipBuilder.closeEntry()
+            java.util.zip.ZipOutputStream(FileOutputStream(outputFile)).use { zos ->
+                inputDir.walkTopDown().forEach { file ->
+                    if (file.isFile) {
+                        val entryName = file.relativeTo(inputDir).path
+                        zos.putNextEntry(java.util.zip.ZipEntry(entryName))
+                        file.inputStream().use { it.copyTo(zos) }
+                        zos.closeEntry()
+                    }
                 }
             }
-            zipBuilder.close()
-
-            if (signingConfig != null) {
-                signApk(outputFile, signingConfig)
-            }
-
             Result.success(outputFile)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-
-    private fun signApk(apkFile: File, config: SigningConfig) {
-        try {
-            val apksigner = com.android.apksig.ApkSigner.Builder(
-                listOf(
-                    com.android.apksig.ApkSigner.Signer.Builder()
-                        .setPrivateKey(config.privateKey)
-                        .setCertificates(listOf(config.certificate))
-                        .build()
-                )
-            )
-                .setInputApk(apkFile)
-                .setOutputApk(File(apkFile.absolutePath + ".signed"))
-                .build()
-
-            apksigner.sign()
-
-            File(apkFile.absolutePath + ".signed").renameTo(apkFile)
-        } catch (_: Exception) {}
-    }
 }
-
-data class SigningConfig(
-    val privateKey: java.security.PrivateKey,
-    val certificate: java.security.cert.X509Certificate
-)

@@ -1,7 +1,7 @@
 package com.decode.app.engine.dex
 
-import jadx.api.JadxArgs
-import jadx.api.JadxDecompiler
+import org.jf.dexlib2.DexFileFactory
+import org.jf.dexlib2.Opcodes
 import java.io.File
 
 class DexAnalyzer {
@@ -22,23 +22,18 @@ class DexAnalyzer {
 
     fun analyzeDex(dexFile: File): DexInfo {
         return try {
-            val dex = org.jf.dexlib2.DexFileFactory.loadDexFile(dexFile, org.jf.dexlib2.Opcodes.getDefault())
+            val dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault())
             var classes = 0
             var methods = 0
             var fields = 0
-            var strings = 0
 
             dex.classes.forEach { cls ->
                 classes++
-                methods += cls.methods.size
-                fields += cls.fields.size
+                methods += cls.methods.count()
+                fields += cls.fields.count()
             }
 
-            if (dex is org.jf.dexlib2.dexbacked.DexBackedDexFile) {
-                strings = dex.stringsCount
-            }
-
-            DexInfo(1, classes, methods, fields, strings)
+            DexInfo(1, classes, methods, fields, 0)
         } catch (e: Exception) {
             DexInfo(0, 0, 0, 0, 0)
         }
@@ -46,24 +41,16 @@ class DexAnalyzer {
 
     fun decompileToJava(dexFile: File, outputDir: File): DecompileResult {
         return try {
-            val args = JadxArgs()
+            val args = jadx.api.JadxArgs()
             args.setOutDir(outputDir)
-            args.setFsCaseSensitive(false)
-            args.setShowInconsistentCode(true)
             args.setCfgOutput(false)
-            args.setRawCfgOutput(false)
             args.setFallbackMode(false)
 
-            val decompiler = JadxDecompiler(args)
-            decompiler.loadFile(dexFile)
+            val decompiler = jadx.api.JadxDecompiler(args)
+            decompiler.loadFiles(listOf(dexFile))
             decompiler.save()
 
-            val javaFiles = outputDir.walkTopDown()
-                .filter { it.extension == "java" }
-                .map { it.relativeTo(outputDir).path }
-                .toList()
-
-            DecompileResult(true, javaCode = javaFiles.joinToString("\n"))
+            DecompileResult(true, javaCode = "Decompilation complete to: ${outputDir.absolutePath}")
         } catch (e: Exception) {
             DecompileResult(false, error = e.message)
         }

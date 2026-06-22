@@ -7,6 +7,10 @@ import java.io.FileInputStream
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.security.cert.CertificateFactory
+import java.io.ByteArrayInputStream
+import java.security.KeyPairGenerator
+import java.security.cert.Certificate
 
 class ApkSignerTool {
 
@@ -34,19 +38,19 @@ class ApkSignerTool {
 
             val outputApk = File(inputApk.parent, "signed_${inputApk.name}")
 
+            val signerConfig = ApkSigner.SignerConfig.Builder(
+                "Decode",
+                privateKey,
+                listOf(certificate as Certificate)
+            ).build()
+
             val signer = ApkSigner.Builder(
-                listOf(
-                    ApkSigner.Signer.Builder()
-                        .setPrivateKey(privateKey)
-                        .setCertificates(listOf(certificate))
-                        .build()
-                )
+                listOf(signerConfig)
             )
                 .setInputApk(inputApk)
                 .setOutputApk(outputApk)
                 .setV1SigningEnabled(true)
                 .setV2SigningEnabled(true)
-                .setV3SigningEnabled(true)
                 .build()
 
             signer.sign()
@@ -62,14 +66,17 @@ class ApkSignerTool {
     fun signWithDefaultKey(inputApk: File): SignResult {
         return try {
             val outputApk = File(inputApk.parent, "signed_${inputApk.name}")
+            val keyPair = generateKeyPair()
+            val certificate = generateSelfSignedCertificate(keyPair)
+
+            val signerConfig = ApkSigner.SignerConfig.Builder(
+                "Decode",
+                keyPair.private as PrivateKey,
+                listOf(certificate as Certificate)
+            ).build()
 
             val signer = ApkSigner.Builder(
-                listOf(
-                    ApkSigner.Signer.Builder()
-                        .setPrivateKey(generateTestKeyPair().private as PrivateKey)
-                        .setCertificates(listOf(generateTestCertificate()))
-                        .build()
-                )
+                listOf(signerConfig)
             )
                 .setInputApk(inputApk)
                 .setOutputApk(outputApk)
@@ -85,42 +92,61 @@ class ApkSignerTool {
         }
     }
 
-    private fun generateTestKeyPair(): java.security.KeyPair {
-        val generator = java.security.KeyPairGenerator.getInstance("RSA")
+    private fun generateKeyPair(): java.security.KeyPair {
+        val generator = KeyPairGenerator.getInstance("RSA")
         generator.initialize(2048)
         return generator.generateKeyPair()
     }
 
-    private fun generateTestCertificate(): java.security.cert.X509Certificate {
-        val keyPair = generateTestKeyPair()
+    private fun generateSelfSignedCertificate(keyPair: java.security.KeyPair): X509Certificate {
         val dn = "CN=Decode, OU=Development, O=Decode, L=Unknown, ST=Unknown, C=UN"
-        val cert = org.bouncycastle.asn1.x500.X500Name(dn)
-        // Using a simple self-signed cert approach
-        return try {
-            val factory = java.security.cert.CertificateFactory.getInstance("X.509")
-            val certBytes = generateSelfSignedCertBytes(keyPair)
-            factory.generateCertificate(java.io.ByteArrayInputStream(certBytes)) as java.security.cert.X509Certificate
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to generate test certificate", e)
-        }
+        val validity = 365 * 24 * 60 * 60
+        val algorithm = "SHA256WithRSA"
+
+        val keyStore = KeyStore.getInstance("PKCS12")
+        keyStore.load(null, null)
+
+        val certBytes = createSelfSignedCertBytes(keyPair, dn, algorithm, validity)
+        val factory = CertificateFactory.getInstance("X.509")
+        return factory.generateCertificate(ByteArrayInputStream(certBytes)) as X509Certificate
     }
 
-    private fun generateSelfSignedCertBytes(keyPair: java.security.KeyPair): ByteArray {
-        // Simplified self-signed certificate generation
-        return try {
-            val dn = "CN=Decode Test Key"
-            val validity = 365 * 24 * 60 * 60
+    private fun createSelfSignedCertBytes(
+        keyPair: java.security.KeyPair,
+        dn: String,
+        algorithm: String,
+        validity: Int
+    ): ByteArray {
+        try {
+            val classDef = Class.forName("javax.security.auth.x500.X500Principal")
+            val principal = classDef.getConstructor(String::class.java).newInstance(dn)
+            val calendar = java.util.Calendar.getInstance()
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            val startDate = calendar.time
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, validity)
+            val endDate = calendar.time
 
-            val keyStore = java.security.KeyStore.getInstance("PKCS12")
-            keyStore.load(null, null)
-            keyStore.setKeyEntry("decode", keyPair.private, "password".toCharArray(), null)
+            val sigClass = Class.forName("java.security.cert.CertificateFactory")
+            val cf = CertificateFactory.getInstance("X.509")
 
-            java.io.ByteArrayOutputStream().use { baos ->
-                keyStore.store(baos, "password".toCharArray())
-                baos.toByteArray()
+            val byteStream = java.io.ByteArrayOutputStream()
+            byteStream.write("-----BEGIN CERTIFICATE-----\n".toByteArray())
+            val encoded = java.util.Base64.getMimeEncoder().encode(
+                keyPair.public.encoded
+            )
+            byteStream.write(encoded)
+            byteStream.write("\n-----END CERTIFICATE-----\n".toByteArray())
+
+            return try {
+                val cert = cf.generateCertificate(
+                    ByteArrayInputStream(byteStream.toByteArray())
+                ) as X509Certificate
+                cert.encoded
+            } catch (e: Exception) {
+                byteArrayOf()
             }
         } catch (e: Exception) {
-            ByteArray(0)
+            byteArrayOf()
         }
     }
 }

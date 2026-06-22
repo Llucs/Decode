@@ -18,7 +18,7 @@ class SvgRenderer {
 
     fun renderToPicture(file: File): Picture? {
         return try {
-            val svg = SVG.getFromFile(file)
+            val svg = SVG.getFromInputStream(file.inputStream())
             svg.renderToPicture()
         } catch (e: Exception) {
             null

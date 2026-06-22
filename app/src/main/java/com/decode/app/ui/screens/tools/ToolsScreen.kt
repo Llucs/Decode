@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image

@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.decode.app.ui.components.AppTopBar
@@ -58,19 +59,17 @@ fun ProjectScreen(
     val workspaceDir = remember(projectId) {
         File(context.cacheDir, "projects/$projectId")
     }
-    var files by remember(projectId) {
-        mutableStateOf(
-            if (workspaceDir.exists()) {
-                workspaceDir.listFiles()?.map {
-                    ProjectFile(
-                        name = it.name,
-                        path = it.absolutePath,
-                        isDirectory = it.isDirectory,
-                        extension = it.extension
-                    )
-                }?.toList() ?: emptyList()
-            } else emptyList()
-        )
+    val fileList = remember(projectId) {
+        if (workspaceDir.exists()) {
+            workspaceDir.listFiles()?.map {
+                ProjectFile(
+                    name = it.name,
+                    path = it.absolutePath,
+                    isDirectory = it.isDirectory,
+                    extension = it.extension
+                )
+            }?.toList() ?: emptyList()
+        } else emptyList()
     }
 
     Scaffold(
@@ -93,7 +92,7 @@ fun ProjectScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { /* Rebuild APK */ },
+                    onClick = { },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -104,7 +103,7 @@ fun ProjectScreen(
                     Text("Rebuild")
                 }
                 Button(
-                    onClick = { /* Sign APK */ },
+                    onClick = { },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.secondary
@@ -125,7 +124,7 @@ fun ProjectScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (files.isEmpty()) {
+            if (fileList.isEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -156,7 +155,7 @@ fun ProjectScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(files) { file ->
+                    items(fileList) { file ->
                         ProjectFileItem(
                             file = file,
                             onClick = {
