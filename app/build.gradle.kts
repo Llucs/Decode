@@ -119,4 +119,7 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+
+    // BouncyCastle
+    implementation(libs.bouncycastle.bcpkix)
 }

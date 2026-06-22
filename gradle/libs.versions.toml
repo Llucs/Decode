@@ -20,6 +20,7 @@ androidsvg = "1.4"
 photoview = "2.3.0"
 antlr4 = "4.13.2"
 coil = "2.6.0"
+bouncycastle = "1.78.1"
 
 [libraries]
 # AndroidX
@@ -81,6 +82,9 @@ antlr4-runtime = { group = "org.antlr", name = "antlr4-runtime", version.ref = "
 # AXML
 # Coil (image loading)
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
+# BouncyCastle
+bouncycastle-bcpkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

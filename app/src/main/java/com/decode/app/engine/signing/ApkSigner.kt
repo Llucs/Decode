@@ -2,14 +2,22 @@ package com.decode.app.engine.signing
 
 import com.android.apksig.ApkSigner
 import com.android.apksig.apk.ApkFormatException
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.cert.X509v3CertificateBuilder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
+import java.math.BigInteger
+import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
+import java.security.Security
 import java.security.cert.X509Certificate
-import java.security.cert.CertificateFactory
-import java.io.ByteArrayInputStream
-import java.security.KeyPairGenerator
+import java.util.Date
 
 class ApkSignerTool {
 
@@ -63,8 +71,11 @@ class ApkSignerTool {
     }
 
     fun signWithDefaultKey(inputApk: File): SignResult {
+        return signWithDefaultKey(inputApk, File(inputApk.parent, "signed_${inputApk.name}"))
+    }
+
+    fun signWithDefaultKey(inputApk: File, outputApk: File): SignResult {
         return try {
-            val outputApk = File(inputApk.parent, "signed_${inputApk.name}")
             val keyPair = generateKeyPair()
             val certificate = generateSelfSignedCertificate(keyPair)
 
@@ -98,28 +109,25 @@ class ApkSignerTool {
     }
 
     private fun generateSelfSignedCertificate(keyPair: java.security.KeyPair): X509Certificate {
-        val certBytes = createSelfSignedCertBytes(keyPair)
-        val factory = CertificateFactory.getInstance("X.509")
-        return factory.generateCertificate(ByteArrayInputStream(certBytes)) as X509Certificate
-    }
+        Security.addProvider(BouncyCastleProvider())
 
-    private fun createSelfSignedCertBytes(
-        keyPair: java.security.KeyPair
-    ): ByteArray = try {
-        val byteStream = java.io.ByteArrayOutputStream()
-        byteStream.write("-----BEGIN CERTIFICATE-----\n".toByteArray())
-        val encoded = java.util.Base64.getMimeEncoder().encode(
-            keyPair.public.encoded
+        val dn = X500Name("CN=Decode, OU=Development, O=Decode, C=UN")
+        val validity = 365 * 24 * 60 * 60 * 1000L
+        val notBefore = Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000L)
+        val notAfter = Date(System.currentTimeMillis() + validity)
+
+        val pubKeyInfo = SubjectPublicKeyInfo.getInstance(keyPair.public.encoded)
+        val certBuilder = X509v3CertificateBuilder(
+            dn,
+            BigInteger.valueOf(System.currentTimeMillis()),
+            notBefore,
+            notAfter,
+            dn,
+            pubKeyInfo
         )
-        byteStream.write(encoded)
-        byteStream.write("\n-----END CERTIFICATE-----\n".toByteArray())
 
-        val cf = CertificateFactory.getInstance("X.509")
-        val cert = cf.generateCertificate(
-            ByteArrayInputStream(byteStream.toByteArray())
-        ) as X509Certificate
-        cert.encoded
-    } catch (e: Exception) {
-        byteArrayOf()
+        val signer = JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.private as PrivateKey)
+        val certHolder = certBuilder.build(signer)
+        return JcaX509CertificateConverter().getCertificate(certHolder)
     }
 }

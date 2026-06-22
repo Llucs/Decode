@@ -1,6 +1,8 @@
 package com.decode.app.ui.screens.project
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,34 +22,31 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.decode.app.ui.components.AppTopBar
-import java.io.File
-
-data class ProjectFile(
-    val name: String,
-    val path: String,
-    val isDirectory: Boolean,
-    val extension: String = ""
-)
 
 @Composable
 fun ProjectScreen(
@@ -55,31 +54,41 @@ fun ProjectScreen(
     onNavigateBack: () -> Unit,
     onOpenEditor: (String) -> Unit
 ) {
-    val context = LocalContext.current
-    val workspaceDir = remember(projectId) {
-        File(context.cacheDir, "projects/$projectId")
+    val viewModel: ProjectViewModel = viewModel()
+    val project by viewModel.project.collectAsState()
+    val files by viewModel.files.collectAsState()
+    val isProcessing by viewModel.isProcessing.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(projectId) {
+        viewModel.loadProject(projectId.toLongOrNull() ?: return@LaunchedEffect)
     }
-    val fileList = remember(projectId) {
-        if (workspaceDir.exists()) {
-            workspaceDir.listFiles()?.map {
-                ProjectFile(
-                    name = it.name,
-                    path = it.absolutePath,
-                    isDirectory = it.isDirectory,
-                    extension = it.extension
-                )
-            }?.toList() ?: emptyList()
-        } else emptyList()
+
+    LaunchedEffect(Unit) {
+        viewModel.statusMessage.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
     }
 
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Project $projectId",
+                title = project?.name ?: "Project",
                 showBackButton = true,
-                onNavigateBack = onNavigateBack
+                onNavigateBack = onNavigateBack,
+                actions = {
+                    if (isProcessing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(end = 16.dp)
+                                .size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -92,8 +101,9 @@ fun ProjectScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { },
+                    onClick = { viewModel.rebuildApk() },
                     modifier = Modifier.weight(1f),
+                    enabled = !isProcessing,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -103,16 +113,22 @@ fun ProjectScreen(
                     Text("Rebuild")
                 }
                 Button(
-                    onClick = { },
+                    onClick = { viewModel.rebuildAndSignApk() },
                     modifier = Modifier.weight(1f),
+                    enabled = !isProcessing,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.secondary
                     )
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.SwapHoriz, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Build & Sign")
                 }
+            }
+
+            if (project != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                ProjectInfoCard(project!!)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -124,39 +140,25 @@ fun ProjectScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (fileList.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+            if (files.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Filled.Folder,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "No files extracted yet",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "No files extracted",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
                 LazyColumn(
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(fileList) { file ->
-                        ProjectFileItem(
+                    items(files) { file ->
+                        ProjectFileRow(
                             file = file,
                             onClick = {
                                 if (!file.isDirectory) {
@@ -172,25 +174,62 @@ fun ProjectScreen(
 }
 
 @Composable
-private fun ProjectFileItem(
-    file: ProjectFile,
+private fun ProjectInfoCard(project: com.decode.app.data.model.Project) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = project.packageName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "v${project.versionName} (${project.versionCode})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            project.sourceApkPath.let { path ->
+                if (path.isNotEmpty()) {
+                    Text(
+                        text = "Source: ${path.substringAfterLast('/')}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProjectFileRow(
+    file: ProjectFileEntry,
     onClick: () -> Unit
 ) {
-    val icon = when {
+    val icon: ImageVector = when {
         file.isDirectory -> Icons.Filled.Folder
-        file.extension in listOf("png", "jpg", "jpeg", "webp", "svg") -> Icons.Filled.Image
+        file.extension in listOf("png", "jpg", "jpeg", "webp", "svg", "bmp") -> Icons.Filled.Image
         file.extension in listOf("mp3", "wav", "ogg", "mid", "midi") -> Icons.Filled.MusicNote
-        file.extension == "dex" -> Icons.Filled.PlayArrow
+        file.extension in listOf("dex", "apk", "jar") -> Icons.Filled.PlayArrow
         else -> Icons.Filled.Description
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        onClick = onClick
+        )
     ) {
         Row(
             modifier = Modifier
@@ -206,15 +245,20 @@ private fun ProjectFileItem(
                        else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = file.name,
                     style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     fontWeight = if (file.isDirectory) FontWeight.Medium else FontWeight.Normal
                 )
                 if (!file.isDirectory) {
                     Text(
-                        text = ".${file.extension}",
+                        text = if (file.size > 0) {
+                            val kb = file.size / 1024
+                            if (kb > 1024) "${kb / 1024} MB" else "$kb KB"
+                        } else ".${file.extension}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

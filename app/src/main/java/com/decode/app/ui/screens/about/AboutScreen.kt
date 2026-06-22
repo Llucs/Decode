@@ -1,5 +1,7 @@
 package com.decode.app.ui.screens.about
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
@@ -33,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -65,18 +69,11 @@ fun AboutScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = rememberAsyncImagePainter(
-                    ImageRequest.Builder(context)
-                        .data("https://github.com/Llucs.png")
-                        .size(256)
-                        .build()
-                ),
-                contentDescription = "Developer",
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
+            Icon(
+                Icons.Filled.Android,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -120,34 +117,54 @@ fun AboutScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable {
-                            val intent = android.content.Intent(
-                                android.content.Intent.ACTION_VIEW,
-                                android.net.Uri.parse("https://github.com/Llucs")
+                    Image(
+                        painter = rememberAsyncImagePainter(
+                            ImageRequest.Builder(context)
+                                .data("https://github.com/Llucs.png")
+                                .size(96)
+                                .build()
+                        ),
+                        contentDescription = "Developer",
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Llucs"))
+                                )
+                            }
+                        ) {
+                            Icon(
+                                Icons.Filled.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                            context.startActivity(intent)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Developed by Llucs",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
-                    ) {
-                        Icon(
-                            Icons.Filled.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Developed by Llucs",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            text = "GitHub: Llucs",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -157,11 +174,9 @@ fun AboutScreen(
 
             Button(
                 onClick = {
-                    val intent = android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse("https://github.com/Llucs/Decode")
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Llucs/Decode"))
                     )
-                    context.startActivity(intent)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
@@ -181,7 +196,7 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Open Source Libraries",
+                text = "Powered By",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.fillMaxWidth()
@@ -190,25 +205,20 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             val libraries = listOf(
-                "Apktool" to "Decompiles and recompiles Android resources",
-                "AAPT/AAPT2" to "Android Asset Packaging Tool",
-                "Smali/Baksmali" to "DEX assembler and disassembler",
-                "DEX2Jar" to "DEX to JAR converter",
                 "JADX" to "DEX to Java decompiler",
-                "APK Signature" to "APK signing and verification",
-                "ZipAlign" to "APK alignment optimization",
-                "AndroidX" to "Jetpack Android support libraries",
-                "Jetpack Compose" to "Modern UI toolkit",
-                "Material 3" to "Material Design 3 components",
-                "Room" to "SQLite ORM database",
-                "Kotlin Coroutines" to "Asynchronous programming",
-                "ANTLR4" to "Parser generator",
                 "DexLib2" to "DEX bytecode library",
+                "Smali" to "DEX assembler/disassembler",
+                "APK Signature" to "APK signing and verification",
+                "AndroidSVG" to "SVG rendering library",
+                "BouncyCastle" to "Cryptographic certificate generation",
+                "Room" to "SQLite ORM database",
+                "Jetpack Compose" to "Modern Android UI toolkit",
+                "Material 3" to "Material Design 3",
+                "Kotlin Coroutines" to "Async programming",
+                "Coil" to "Image loading",
+                "ANTLR4" to "Parser generator",
+                "Commons IO" to "IO utilities",
                 "Guava" to "Google core libraries",
-                "Commons IO" to "Apache IO utilities",
-                "AndroidSVG" to "SVG rendering",
-                "PhotoView" to "Image viewer",
-                "Coil" to "Image loading library",
             )
 
             libraries.forEach { (name, desc) ->
@@ -253,7 +263,7 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Built with ❤️ using Kotlin, Jetpack Compose & Material 3",
+                text = "Built with Kotlin, Jetpack Compose & Material 3",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -263,7 +273,7 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "© 2026 Llucs. All rights reserved.",
+                text = "\u00A9 2026 Llucs. All rights reserved.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

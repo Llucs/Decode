@@ -6,9 +6,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.security.KeyStore
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
 
 class ApkProcessor(private val context: Context) {
 
@@ -96,6 +93,28 @@ class ApkProcessor(private val context: Context) {
                     }
                 }
             }
+        }
+    }
+
+    suspend fun processApkFromFile(apkFile: File, outputDir: File): Result<ApkInfo> = withContext(Dispatchers.IO) {
+        try {
+            outputDir.mkdirs()
+            val manifestInfo = extractManifestInfo(apkFile)
+            extractApk(apkFile, outputDir)
+
+            val apkInfo = ApkInfo(
+                packageName = manifestInfo.pkg,
+                versionName = manifestInfo.verName,
+                versionCode = manifestInfo.verCode,
+                minSdk = manifestInfo.minSdk,
+                targetSdk = manifestInfo.targetSdk,
+                fileSize = apkFile.length(),
+                entryCount = outputDir.listFiles()?.size ?: 0
+            )
+
+            Result.success(apkInfo)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

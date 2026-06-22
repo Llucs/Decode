@@ -5,34 +5,47 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.decode.app.ui.components.AppTopBar
-import java.io.File
 
 @Composable
 fun EditorScreen(
     filePath: String,
     onNavigateBack: () -> Unit
 ) {
-    var content by remember(filePath) {
-        mutableStateOf(
-            try {
-                File(filePath).readText()
-            } catch (e: Exception) {
-                "// Error loading file: ${e.message}"
-            }
-        )
+    val viewModel: EditorViewModel = viewModel()
+    val content by viewModel.content.collectAsState()
+    val isModified by viewModel.isModified.collectAsState()
+    val saveResult by viewModel.saveResult.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(filePath) {
+        viewModel.loadFile(filePath)
+    }
+
+    LaunchedEffect(saveResult) {
+        saveResult?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSaveResult()
+        }
     }
 
     val fileName = filePath.substringAfterLast('/')
@@ -40,11 +53,25 @@ fun EditorScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = fileName.ifEmpty { "Editor" },
+                title = if (isModified) "* $fileName" else fileName,
                 showBackButton = true,
-                onNavigateBack = onNavigateBack
+                onNavigateBack = onNavigateBack,
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.save() },
+                        enabled = isModified
+                    ) {
+                        Icon(
+                            Icons.Filled.Save,
+                            contentDescription = "Save",
+                            tint = if (isModified) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
+                    }
+                }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -54,7 +81,7 @@ fun EditorScreen(
         ) {
             TextField(
                 value = content,
-                onValueChange = { content = it },
+                onValueChange = { viewModel.updateContent(it) },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp),
