@@ -56,6 +56,12 @@ android {
             excludes += "/META-INF/LICENSE.txt"
             excludes += "/META-INF/NOTICE"
             excludes += "/META-INF/NOTICE.txt"
+            excludes += "/META-INF/*.SF"
+            excludes += "/META-INF/*.DSA"
+            excludes += "/META-INF/*.RSA"
+            excludes += "/META-INF/*.properties"
+            excludes += "/META-INF/versions"
+            excludes += "/META-INF/versions/"
         }
     }
 }
