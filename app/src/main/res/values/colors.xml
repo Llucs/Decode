@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="decode_primary">#FF6C63FF</color>
+    <color name="decode_secondary">#FF03DAC6</color>
+    <color name="decode_tertiary">#FFE040FB</color>
+    <color name="decode_background">#FFF5F0FF</color>
+    <color name="decode_surface">#FFFFFFFF</color>
+    <color name="decode_error">#FFB00020</color>
+    <color name="decode_on_primary">#FFFFFFFF</color>
+    <color name="decode_on_secondary">#FF000000</color>
+    <color name="decode_on_background">#FF1C1B1F</color>
+    <color name="decode_on_surface">#FF1C1B1F</color>
+</resources>

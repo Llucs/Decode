@@ -1,0 +1,12 @@
+-keep class com.decode.app.** { *; }
+-keep class org.jf.** { *; }
+-keep class jadx.** { *; }
+-keep class com.android.apksig.** { *; }
+-keep class org.apache.commons.io.** { *; }
+-keep class com.google.common.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class * extends androidx.room.RoomDatabase
+-dontwarn com.google.common.**
+-dontwarn org.jf.**
+-dontwarn jadx.**
